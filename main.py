@@ -6,25 +6,30 @@ from tkinter import filedialog
 from PIL import ImageTk, ImageDraw
 from pdf2image import convert_from_path
 
+'''
+GUI layout helpers
+https://www.pythonguis.com/tutorials/use-tkinter-to-design-gui-layout/
+https://stackoverflow.com/questions/28089942/difference-between-fill-and-expand-options-for-tkinter-pack-method
+'''
 
-# https://stackoverflow.com/questions/29789554/tkinter-draw-rectangle-using-a-mouse
+
 class ImageFrame(Frame):
     def __init__(self, master):
-        super().__init__(master)
+        super().__init__(master, bg='grey')
+
         self.x = self.y = 0
         self.canvas = Canvas(self, cursor="cross")
+        self.v_bar = Scrollbar(self, orient=VERTICAL)
+        self.h_bar = Scrollbar(self, orient=HORIZONTAL)
 
-        self.sbarv = Scrollbar(self, orient=VERTICAL)
-        self.sbarh = Scrollbar(self, orient=HORIZONTAL)
-        self.sbarv.config(command=self.canvas.yview)
-        self.sbarh.config(command=self.canvas.xview)
+        self.v_bar.config(command=self.canvas.yview)
+        self.h_bar.config(command=self.canvas.xview)
+        self.canvas.config(yscrollcommand=self.v_bar.set)
+        self.canvas.config(xscrollcommand=self.h_bar.set)
 
-        self.canvas.config(yscrollcommand=self.sbarv.set)
-        self.canvas.config(xscrollcommand=self.sbarh.set)
-
-        self.canvas.grid(row=0, column=0, sticky=N + S + E + W)
-        self.sbarv.grid(row=0, column=1, stick=N + S)
-        self.sbarh.grid(row=1, column=0, sticky=E + W)
+        self.v_bar.pack(side=RIGHT, fill=Y, expand=False)
+        self.h_bar.pack(side=BOTTOM, fill=X, expand=False)
+        self.canvas.pack(side=TOP, expand=True, fill=BOTH)
 
         self.canvas.bind("<ButtonPress-1>", self.on_button_press)
         self.canvas.bind("<B1-Motion>", self.on_move_press)
@@ -35,6 +40,7 @@ class ImageFrame(Frame):
         self.start_x = None
         self.start_y = None
 
+    # https://stackoverflow.com/questions/29789554/tkinter-draw-rectangle-using-a-mouse
     def draw_rect(self, x1, y1, x2, y2):
         return self.canvas.create_rectangle(x1, y1, x2, y2, fill='black')
 
@@ -78,19 +84,26 @@ class ImageFrame(Frame):
         self.drawing_rect = None
 
 
-class Window:
-    def __init__(self, master):
-        # https://www.pythonguis.com/tutorials/use-tkinter-to-design-gui-layout/
-        # Create left and right frames
-        left_frame = Frame(master, width=200, height=400, bg='grey')
-        left_frame.grid(row=0, column=0, padx=10, pady=5)
+class App(Tk):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        image_frame = ImageFrame(master)
-        image_frame.grid(row=0, column=1, padx=10, pady=5)
+        self.title("Redact PDF")
+        # self.geometry('1200x800')
+        self.geometry('800x600')
+        self.minsize(900, 600)
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
 
-        # Create toolbar frame
-        tool_bar = Frame(left_frame, width=180, height=185)
-        tool_bar.grid(row=2, column=0, padx=5, pady=5)
+        left_frame = Frame(self)  # , bg='grey'
+        left_frame.pack(side=LEFT, fill=Y, expand=False)
+
+        image_frame = ImageFrame(self)
+        image_frame.pack(side=RIGHT, fill=BOTH, expand=True)
+
+        # Create tool_bar
+        tool_bar = Frame(left_frame)
+        tool_bar.pack(side=TOP, fill=X, expand=False, pady=10)
 
         # Example labels that serve as placeholders for other widgets
         Button(tool_bar, text="Open", command=self.load_pdf, relief=RAISED) \
@@ -98,14 +111,20 @@ class Window:
         Button(tool_bar, text="Save", command=self.save_pdf, relief=RAISED) \
             .grid(row=0, column=1, padx=5, pady=3, ipadx=10)
 
-        thumbs_scroll = Scrollbar(tool_bar)
-        thumbs_scroll.grid(row=1, column=1, stick=N + S)
-        thumbs_list = Listbox(tool_bar, yscrollcommand=thumbs_scroll.set)
-        thumbs_list.grid(row=1, column=0)
+        # Create thumbs_bar
+        thumbs_bar = Frame(left_frame)
+        thumbs_bar.pack(side=TOP, fill=BOTH, expand=False)
+        thumbs_scroll = Scrollbar(thumbs_bar)
+        thumbs_list = Listbox(thumbs_bar, yscrollcommand=thumbs_scroll.set)
         thumbs_scroll.config(command=thumbs_list.yview)
+
+        thumbs_scroll.pack(side=RIGHT, fill=Y, expand=False)
+        thumbs_list.pack(side=TOP, fill=BOTH, expand=False)
+
         on_select = lambda evt: self.on_select_thumb(int(evt.widget.curselection()[0]))
         thumbs_list.bind('<<ListboxSelect>>', on_select)
 
+        # rest of init
         self.data_list = []
         self.image_frame = image_frame
         self.thumbs_list = thumbs_list
@@ -156,13 +175,7 @@ class Window:
 
 
 def main():
-    root = Tk()  # create root window
-    root.title("Redact PDF")  # title of the GUI window
-    root.geometry('1200x800')
-    # root.maxsize(900, 600)  # specify the max size the window can expand to
-    root.config(bg="skyblue")  # specify background color
-    Window(root)
-    root.mainloop()
+    App().mainloop()
 
 
 if __name__ == "__main__":
