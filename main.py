@@ -7,9 +7,14 @@ from PIL import ImageTk, ImageDraw
 from pdf2image import convert_from_path
 
 '''
-GUI layout helpers
+References:
+
++ GUI layout helpers
 https://www.pythonguis.com/tutorials/use-tkinter-to-design-gui-layout/
 https://stackoverflow.com/questions/28089942/difference-between-fill-and-expand-options-for-tkinter-pack-method
+
++ Zoom-move-pan
+https://itecnote.com/tecnote/python-tkinter-canvas-zoom-move-pan/
 '''
 
 
@@ -35,10 +40,22 @@ class ImageFrame(Frame):
         self.canvas.bind("<B1-Motion>", self.on_move_press)
         self.canvas.bind("<ButtonRelease-1>", self.on_button_release)
 
+        # Scrolling with the mouse:
+        # https://stackoverflow.com/questions/20645532/move-a-tkinter-canvas-with-mouse
+        # https://stackoverflow.com/questions/58509952/tkinter-check-if-shift-is-down-when-button-is-pressed
+        self.canvas.bind("<Shift-ButtonPress-1>", self.scroll_start)
+        self.canvas.bind("<Shift-B1-Motion>", self.scroll_move)
+
         self.rect_list = None
         self.drawing_rect = None
         self.start_x = None
         self.start_y = None
+
+    def scroll_start(self, event):
+        self.canvas.scan_mark(event.x, event.y)
+
+    def scroll_move(self, event):
+        self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     # https://stackoverflow.com/questions/29789554/tkinter-draw-rectangle-using-a-mouse
     def draw_rect(self, x1, y1, x2, y2):
@@ -67,13 +84,13 @@ class ImageFrame(Frame):
         self.canvas.coords(self.drawing_rect, self.start_x, self.start_y, cur_x, cur_y)
 
         w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
-        if event.x > 0.9 * w:
+        if event.x > 0.99 * w:
             self.canvas.xview_scroll(1, 'units')
-        elif event.x < 0.1 * w:
+        elif event.x < 0.01 * w:
             self.canvas.xview_scroll(-1, 'units')
-        if event.y > 0.9 * h:
+        if event.y > 0.99 * h:
             self.canvas.yview_scroll(1, 'units')
-        elif event.y < 0.1 * h:
+        elif event.y < 0.01 * h:
             self.canvas.yview_scroll(-1, 'units')
 
     def on_button_release(self, event):
@@ -95,14 +112,14 @@ class App(Tk):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-        left_frame = Frame(self)  # , bg='grey'
+        left_frame = Frame(self, bg='grey', padx=2)
         left_frame.pack(side=LEFT, fill=Y, expand=False)
 
         image_frame = ImageFrame(self)
         image_frame.pack(side=RIGHT, fill=BOTH, expand=True)
 
         # Create tool_bar
-        tool_bar = Frame(left_frame)
+        tool_bar = Frame(left_frame, bg='grey')
         tool_bar.pack(side=TOP, fill=X, expand=False, pady=10)
 
         # Example labels that serve as placeholders for other widgets
@@ -113,13 +130,13 @@ class App(Tk):
 
         # Create thumbs_bar
         thumbs_bar = Frame(left_frame)
-        thumbs_bar.pack(side=TOP, fill=BOTH, expand=False)
+        thumbs_bar.pack(side=TOP, fill=BOTH, expand=True)
         thumbs_scroll = Scrollbar(thumbs_bar)
         thumbs_list = Listbox(thumbs_bar, yscrollcommand=thumbs_scroll.set)
         thumbs_scroll.config(command=thumbs_list.yview)
 
         thumbs_scroll.pack(side=RIGHT, fill=Y, expand=False)
-        thumbs_list.pack(side=TOP, fill=BOTH, expand=False)
+        thumbs_list.pack(side=TOP, fill=BOTH, expand=True)
 
         on_select = lambda evt: self.on_select_thumb(int(evt.widget.curselection()[0]))
         thumbs_list.bind('<<ListboxSelect>>', on_select)
