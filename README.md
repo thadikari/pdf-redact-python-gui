@@ -1,5 +1,7 @@
 # Redact PDF - Python-based PDF redaction tool with GUI
 
+A Python-based PDF redaction tool with GUI.
+
 <img src="media/screenshot.PNG?raw=true" width="640" />
 
 ### How to use this tool:
